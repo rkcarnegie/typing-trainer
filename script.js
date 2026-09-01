@@ -114,7 +114,7 @@
 
   function extendPassageIfNeeded() {
     if (mode !== "timed") return;
-    if (passage.length - typingInput.value.length < 150) {
+    while (passage.length - typingInput.value.length < 150) {
       const addition = " " + randomPassage();
       passage += addition;
       appendSpans(addition);
