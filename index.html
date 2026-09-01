@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Typing Trainer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>Typing Trainer</h1>
+  <button id="themeToggle" class="icon-btn" aria-label="Toggle dark mode" title="Toggle dark mode">🌙</button>
+</header>
+
+<main>
+
+  <section class="panel controls">
+    <div class="difficulty-group" role="group" aria-label="Difficulty level">
+      <button class="diff-btn" data-difficulty="short">Short</button>
+      <button class="diff-btn" data-difficulty="medium">Medium</button>
+      <button class="diff-btn" data-difficulty="long">Long</button>
+    </div>
+    <button id="restartBtn" class="secondary-btn">New Passage</button>
+  </section>
+
+  <section class="panel stats-bar">
+    <div class="stat">
+      <span class="stat-label">WPM</span>
+      <span class="stat-value" id="statWpm">0</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Accuracy</span>
+      <span class="stat-value" id="statAccuracy">100%</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Time</span>
+      <span class="stat-value" id="statTime">0.0s</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Errors</span>
+      <span class="stat-value" id="statErrors">0</span>
+    </div>
+    <div class="stat best-stat">
+      <span class="stat-label">Best WPM (<span id="bestDifficultyLabel">Short</span>)</span>
+      <span class="stat-value" id="statBest">&ndash;</span>
+    </div>
+  </section>
+
+  <section class="panel typing-area">
+    <div id="passageDisplay" class="passage" tabindex="0" aria-label="Typing passage"></div>
+    <textarea id="typingInput" class="typing-input" autocomplete="off" autocorrect="off"
+      autocapitalize="off" spellcheck="false" aria-label="Type the passage here"></textarea>
+  </section>
+
+  <section id="resultsPanel" class="panel results hidden">
+    <h2 id="resultsHeading">Results</h2>
+    <div class="results-grid">
+      <div class="result-item"><span class="result-label">WPM</span><span class="result-value" id="resultWpm">0</span></div>
+      <div class="result-item"><span class="result-label">Accuracy</span><span class="result-value" id="resultAccuracy">100%</span></div>
+      <div class="result-item"><span class="result-label">Time</span><span class="result-value" id="resultTime">0.0s</span></div>
+      <div class="result-item"><span class="result-label">Errors</span><span class="result-value" id="resultErrors">0</span></div>
+    </div>
+    <p id="newBestBadge" class="new-best hidden">New best score!</p>
+    <button id="tryAgainBtn" class="primary-btn">Try Again</button>
+  </section>
+
+</main>
+
+<footer>
+  <p>Scores are saved locally in your browser.</p>
+</footer>
+
+<script src="passages.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
