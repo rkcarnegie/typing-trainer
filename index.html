@@ -16,12 +16,23 @@
 <main>
 
   <section class="panel controls">
-    <div class="difficulty-group" role="group" aria-label="Difficulty level">
-      <button class="diff-btn" data-difficulty="short">Short</button>
-      <button class="diff-btn" data-difficulty="medium">Medium</button>
-      <button class="diff-btn" data-difficulty="long">Long</button>
+    <div class="control-groups">
+      <div class="difficulty-group" id="modeGroup" role="group" aria-label="Mode">
+        <button class="diff-btn" data-mode="passage">Passage</button>
+        <button class="diff-btn" data-mode="timed">Countdown</button>
+      </div>
+      <div class="difficulty-group" id="diffGroup" role="group" aria-label="Difficulty level">
+        <button class="diff-btn" data-difficulty="short">Short</button>
+        <button class="diff-btn" data-difficulty="medium">Medium</button>
+        <button class="diff-btn" data-difficulty="long">Long</button>
+      </div>
+      <div class="difficulty-group hidden" id="durationGroup" role="group" aria-label="Countdown duration">
+        <button class="diff-btn" data-duration="15">15s</button>
+        <button class="diff-btn" data-duration="30">30s</button>
+        <button class="diff-btn" data-duration="60">60s</button>
+      </div>
     </div>
-    <button id="restartBtn" class="secondary-btn">New Passage</button>
+    <button id="restartBtn" class="secondary-btn">New Round</button>
   </section>
 
   <section class="panel stats-bar">

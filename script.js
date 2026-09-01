@@ -1,13 +1,18 @@
 (() => {
   const STORAGE_THEME = "typingTrainer.theme";
   const STORAGE_BEST = "typingTrainer.bestScores";
+  const ALL_PASSAGES = [...PASSAGES.short, ...PASSAGES.medium, ...PASSAGES.long];
 
   const passageDisplay = document.getElementById("passageDisplay");
   const typingInput = document.getElementById("typingInput");
   const themeToggle = document.getElementById("themeToggle");
   const restartBtn = document.getElementById("restartBtn");
   const tryAgainBtn = document.getElementById("tryAgainBtn");
-  const diffButtons = document.querySelectorAll(".diff-btn");
+  const modeButtons = document.querySelectorAll("#modeGroup .diff-btn");
+  const diffButtons = document.querySelectorAll("#diffGroup .diff-btn");
+  const durationButtons = document.querySelectorAll("#durationGroup .diff-btn");
+  const diffGroup = document.getElementById("diffGroup");
+  const durationGroup = document.getElementById("durationGroup");
   const resultsPanel = document.getElementById("resultsPanel");
   const newBestBadge = document.getElementById("newBestBadge");
   const bestDifficultyLabel = document.getElementById("bestDifficultyLabel");
@@ -23,7 +28,9 @@
   const resultTime = document.getElementById("resultTime");
   const resultErrors = document.getElementById("resultErrors");
 
+  let mode = "passage"; // "passage" | "timed"
   let difficulty = "short";
+  let duration = 30; // seconds, timed mode
   let passage = "";
   let startTime = null;
   let tickHandle = null;
@@ -39,6 +46,14 @@
 
   function saveBestScores(scores) {
     localStorage.setItem(STORAGE_BEST, JSON.stringify(scores));
+  }
+
+  function scoreKey() {
+    return mode === "timed" ? `timed-${duration}` : difficulty;
+  }
+
+  function scoreLabel() {
+    return mode === "timed" ? `${duration}s` : difficulty[0].toUpperCase() + difficulty.slice(1);
   }
 
   function applyTheme(theme) {
@@ -62,27 +77,54 @@
     applyTheme(current === "dark" ? "light" : "dark");
   });
 
-  function pickPassage(level) {
-    const pool = PASSAGES[level];
-    return pool[Math.floor(Math.random() * pool.length)];
+  function randomPassage() {
+    return ALL_PASSAGES[Math.floor(Math.random() * ALL_PASSAGES.length)];
   }
 
-  function renderPassage() {
-    passageDisplay.innerHTML = "";
+  function buildPassage() {
+    if (mode === "passage") {
+      const pool = PASSAGES[difficulty];
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+    // Timed mode: build a long stream of text, generously sized for the
+    // chosen duration so a fast typist won't reach the end before time is up.
+    let text = "";
+    const minLen = duration * 20 + 400;
+    while (text.length < minLen) {
+      text += (text ? " " : "") + randomPassage();
+    }
+    return text;
+  }
+
+  function appendSpans(text) {
     const frag = document.createDocumentFragment();
-    for (const ch of passage) {
+    for (const ch of text) {
       const span = document.createElement("span");
       span.textContent = ch;
       frag.appendChild(span);
     }
     passageDisplay.appendChild(frag);
+  }
+
+  function renderPassage() {
+    passageDisplay.innerHTML = "";
+    appendSpans(passage);
     passageDisplay.children[0]?.classList.add("current");
+  }
+
+  function extendPassageIfNeeded() {
+    if (mode !== "timed") return;
+    if (passage.length - typingInput.value.length < 150) {
+      const addition = " " + randomPassage();
+      passage += addition;
+      appendSpans(addition);
+    }
   }
 
   function updateBestDisplay() {
     const scores = loadBestScores();
-    bestDifficultyLabel.textContent = difficulty[0].toUpperCase() + difficulty.slice(1);
-    statBest.textContent = scores[difficulty] ? scores[difficulty] : "–";
+    bestDifficultyLabel.textContent = scoreLabel();
+    statBest.textContent = scores[scoreKey()] ? scores[scoreKey()] : "–";
   }
 
   function resetRound(newPassage = true) {
@@ -90,7 +132,7 @@
     tickHandle = null;
     startTime = null;
     finished = false;
-    if (newPassage) passage = pickPassage(difficulty);
+    if (newPassage) passage = buildPassage();
     renderPassage();
     typingInput.value = "";
     typingInput.disabled = false;
@@ -99,9 +141,14 @@
     newBestBadge.classList.add("hidden");
     statWpm.textContent = "0";
     statAccuracy.textContent = "100%";
-    statTime.textContent = "0.0s";
+    statTime.textContent = mode === "timed" ? `${duration}s` : "0.0s";
     statErrors.textContent = "0";
     updateBestDisplay();
+  }
+
+  function elapsedCappedMs() {
+    const raw = Date.now() - startTime;
+    return mode === "timed" ? Math.min(raw, duration * 1000) : raw;
   }
 
   function computeStats(elapsedMs) {
@@ -118,12 +165,19 @@
   }
 
   function tick() {
-    const elapsed = Date.now() - startTime;
+    const elapsed = elapsedCappedMs();
     const { wpm, accuracy, errors } = computeStats(elapsed);
     statWpm.textContent = wpm;
     statAccuracy.textContent = `${accuracy}%`;
-    statTime.textContent = `${(elapsed / 1000).toFixed(1)}s`;
     statErrors.textContent = errors;
+
+    if (mode === "timed") {
+      const remainingMs = Math.max(duration * 1000 - (Date.now() - startTime), 0);
+      statTime.textContent = `${Math.ceil(remainingMs / 1000)}s`;
+      if (remainingMs <= 0) finishRound();
+    } else {
+      statTime.textContent = `${(elapsed / 1000).toFixed(1)}s`;
+    }
   }
 
   function highlightPassage() {
@@ -138,13 +192,14 @@
         span.classList.add("current");
       }
     }
+    passageDisplay.querySelector(".current")?.scrollIntoView({ block: "nearest" });
   }
 
   function finishRound() {
     finished = true;
     clearInterval(tickHandle);
     typingInput.disabled = true;
-    const elapsed = Date.now() - startTime;
+    const elapsed = elapsedCappedMs();
     const { wpm, accuracy, errors } = computeStats(elapsed);
 
     resultWpm.textContent = wpm;
@@ -153,9 +208,10 @@
     resultErrors.textContent = errors;
 
     const scores = loadBestScores();
-    const previousBest = scores[difficulty] || 0;
+    const key = scoreKey();
+    const previousBest = scores[key] || 0;
     if (wpm > previousBest) {
-      scores[difficulty] = wpm;
+      scores[key] = wpm;
       saveBestScores(scores);
       newBestBadge.classList.remove("hidden");
     }
@@ -167,7 +223,9 @@
   typingInput.addEventListener("input", () => {
     if (finished) return;
 
-    if (typingInput.value.length > passage.length) {
+    if (mode === "timed") {
+      extendPassageIfNeeded();
+    } else if (typingInput.value.length > passage.length) {
       typingInput.value = typingInput.value.slice(0, passage.length);
     }
 
@@ -179,9 +237,19 @@
     highlightPassage();
     tick();
 
-    if (typingInput.value.length === passage.length) {
+    if (mode === "passage" && typingInput.value.length === passage.length) {
       finishRound();
     }
+  });
+
+  modeButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      mode = btn.dataset.mode;
+      modeButtons.forEach((b) => b.classList.toggle("active", b === btn));
+      diffGroup.classList.toggle("hidden", mode !== "passage");
+      durationGroup.classList.toggle("hidden", mode !== "timed");
+      resetRound();
+    });
   });
 
   diffButtons.forEach((btn) => {
@@ -192,12 +260,22 @@
     });
   });
 
+  durationButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      duration = Number(btn.dataset.duration);
+      durationButtons.forEach((b) => b.classList.toggle("active", b === btn));
+      resetRound();
+    });
+  });
+
   restartBtn.addEventListener("click", () => resetRound());
   tryAgainBtn.addEventListener("click", () => resetRound());
 
   function init() {
     initTheme();
+    modeButtons.forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
     diffButtons.forEach((b) => b.classList.toggle("active", b.dataset.difficulty === difficulty));
+    durationButtons.forEach((b) => b.classList.toggle("active", Number(b.dataset.duration) === duration));
     resetRound();
   }
 
